@@ -1,0 +1,23 @@
+# --- Obsidian: per-device state (causes sync conflicts) ---
+.obsidian/workspace.json
+.obsidian/workspace-mobile.json
+.obsidian/workspace*.json
+.trash/
+
+# --- Build artifacts / dependencies ---
+.qa_deck_build/node_modules/
+.qa_deck_build/render*/
+.qa_deck_build/assets/
+node_modules/
+
+# --- IDE / tooling ---
+.idea/
+.claude/
+
+# --- OS junk ---
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# --- Secrets: never sync this notes file (contains API keys/tokens) ---
+Разное/Апи роутер.md
