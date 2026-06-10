@@ -67,11 +67,41 @@
 
 Каждый шаг превращает предыдущий «черновой» код во что-то более прочное: разрозненные переменные становятся классом, класс входит в иерархию, иерархия попадает в репозиторий, репозиторий сохраняется в файл, и наконец всё покрывается тестами.
 
+> [!info] Полная карта классов — что есть в готовом проекте
+> | Класс / Тип | Пакет | Поля | Ключевые методы |
+> |---|---|---|---|
+> | `Main` | `tracker` | — | `main()` |
+> | `ProjectClass` | `tracker` | `APP_NAME`, `VERSION` | `getAppName()`, `getVersion()` |
+> | `MemoryDemo` | `tracker` | — | `run()` |
+> | `Issue` *(abstract)* | `tracker.model` | `id`, `title`, `reporter`, `status` | `describe()`, `getSummary()`, `canTransitionTo(Status)` |
+> | `Bug` | `tracker.model` | `stepsToReproduce`, `resolved`, `createdDayOfYear`, `severity` | `getPriorityScore()`, `describe()`, `getSummary()`, `Bug(Bug other)` копирующий конструктор |
+> | `Task` | `tracker.model` | `estimateHours` | `describe()`, `getSummary()` |
+> | `Story` | `tracker.model` | `storyPoints` | `describe()`, `getSummary()` |
+> | `Severity` *(enum)* | `tracker.model` | `weight: int` | `getWeight()` |
+> | `Status` *(enum)* | `tracker.model` | — | `canTransitionTo(Status)` |
+> | `Reportable` *(интерфейс)* | `tracker.model` | — | `generateReport()` |
+> | `Assignable` *(интерфейс)* | `tracker.model` | — | `assignTo(String)`, `getAssignee()` |
+> | `ReportFormatter` | `tracker.util` | — | `format(Issue)`, `formatKey(String,int)`, `parseKey(String)`, `validateEmail(String)` |
+> | `Repository<T>` *(интерфейс)* | `tracker.repository` | — | `add(T)`, `getById(int)`, `getAll()`, `remove(int)` |
+> | `InMemoryRepository<T>` | `tracker.repository` | `Map<Integer,T> store` | все выше + `getByStatus(Status)`, `countBySeverity()`, `filterBySeverity(Severity)`, `sortedByWeightDesc()`, `titles()`, `countByStatus()`, `getByIdOrThrow(int)` |
+> | `IssueNotFoundException` | `tracker.exception` | — | `IssueNotFoundException(String)` |
+> | `InvalidIssueException` | `tracker.exception` | — | `InvalidIssueException(String)` |
+> | `DuplicateIssueException` | `tracker.exception` | — | `DuplicateIssueException(String)` |
+> | `@CsvColumn` *(аннотация)* | `tracker.annotation` | `name: String` | — |
+> | `CsvMapper` | `tracker.util` | — | `toHeader(Class<?>)`, `toRow(Object)` |
+> | `IssueFileStorage` | `tracker.io` | — | `save(repo, path)`, `load(path)` |
+
 ---
 
 ## Настройка проекта
 
 **Тема:** [[00 Основы Java]] · **Опирается на:** ничего — это старт
+
+> [!info] Что строим
+> | Действие | Класс | Поля | Методы |
+> |---|---|---|---|
+> | Создать | `Main` в `tracker` | — | `main()` — печатает баннер |
+> | Создать | `ProjectClass` в `tracker` | `APP_NAME: String`, `VERSION: String` (оба `static final`) | `getAppName()`, `getVersion()` |
 
 **Задача:** Установите JDK (21+) и создайте новый проект IntelliJ IDEA с именем `qa-tracker`. Создайте базовый пакет `com.innowise.tracker` и класс `Main` внутри него. В `main` выведите приветственный баннер, например `=== QA Issue Tracker v0.1 ===`. Храните имя приложения и версию в константах.
 
@@ -92,6 +122,11 @@
 
 **Тема:** [[01 Переменные типы данных операторы]] · **Опирается на:** Настройка проекта
 
+> [!info] Что строим
+> | Действие | Класс | Переменные (локальные, класса ещё нет) | Что вычислить |
+> |---|---|---|---|
+> | Изменить | `Main` | `id: int`, `title: String`, `reporter: String`, `severityLevel: int`, `resolved: boolean`, `createdDayOfYear: int` | `ageInDays` = сегодня − createdDayOfYear; `priorityScore` = severityLevel × 10 |
+
 **Задача:** Внутри `main` опишите **один** баг, используя только локальные переменные (пока без класса): `id` (int), `title` (String), `reporter` (String), `severityLevel` (int, 1–4), `resolved` (boolean) и `createdDayOfYear` (int). Выберите значение «сегодня» и вычислите **возраст бага в днях** арифметикой. Вычислите **priority score** = `severityLevel * 10` (используйте операторы). Выведите каждое значение и оба вычисленных числа в читаемом виде.
 
 **Критерии приёмки:**
@@ -110,6 +145,11 @@
 ## Логика триажа
 
 **Тема:** [[02 Управляющие конструкции]] · **Опирается на:** Моделирование бага через переменные
+
+> [!info] Что строим
+> | Действие | Класс | Что добавить |
+> |---|---|---|
+> | Изменить | `Main` | `switch` по severityLevel → строка-метка; `if/else` эскалация (severity ≥ 3 && !resolved); `for` по `int[]` с severity; `while` — счётчик High/Critical |
 
 **Задача:** Напишите логику триажа, которая превращает `severityLevel` в метку приоритета. Используйте `switch` по severity (1→"Low", 2→"Medium", 3→"High", 4→"Critical", всё прочее→"Unknown"). Затем используйте `if/else`, чтобы пометить баг как "Escalated", когда `severity >= 3` **и** он не resolved. Наконец, пройдите циклом по `int[]` из нескольких severity и **посчитайте**, сколько из них High или Critical, выведя итог.
 
@@ -130,6 +170,11 @@
 
 **Тема:** [[03 Основы ООП]] · **Опирается на:** Моделирование бага через переменные, Логика триажа
 
+> [!info] Что строим
+> | Действие | Класс | Поля | Методы |
+> |---|---|---|---|
+> | Создать | `Bug` в `tracker.model` | `id: int`, `title: String`, `reporter: String`, `resolved: boolean`, `createdDayOfYear: LocalDate`, `severity: Severity` | `Bug(id,title,reporter,resolved,date,severity)` полный конструктор; `Bug(id,title,reporter,severity)` короткий через `this(...)`; геттеры/сеттеры (setTitle валидирует непустоту; setSeverity валидирует не-null); `getPriorityScore()` → вес × 10; `toString()`; `equals()`/`hashCode()` только по id |
+
 **Задача:** Превратите разрозненные переменные из задания 01 в настоящий класс `Bug` в `com.innowise.tracker.model`. Добавьте параметризованный конструктор и перегруженный (цепочка конструкторов через `this(...)`). Сделайте поля `private` с геттерами/сеттерами; сеттеры должны валидировать (title не пустой, severity 1–4). Переопределите `toString()` и переопределите `equals()`/`hashCode()` только по `id`. В `Main` создайте несколько объектов `Bug` и выведите их.
 
 **Критерии приёмки:**
@@ -148,6 +193,14 @@
 ## Иерархия Issue
 
 **Тема:** [[04 ООП Наследование и полиморфизм]] · **Опирается на:** Класс Bug
+
+> [!info] Что строим
+> | Действие | Класс | Поля | Методы |
+> |---|---|---|---|
+> | Создать | `Issue` в `tracker.model` | `id: int`, `title: String`, `reporter: String` (перенесены из Bug) | `Issue(id,title,reporter)`; `describe()` — печатает id, title, reporter; геттеры/сеттеры |
+> | Изменить | **`Bug`** | `stepsToReproduce: String` (новое) | `describe()` `@Override` — вызывает `super.describe()` + печатает шаги |
+> | Создать | `Task` в `tracker.model` | `estimateHours: int` | `Task(id,title,reporter,hours)`; `describe()` `@Override` — вызывает `super.describe()` + печатает часы |
+> | Создать | `Story` в `tracker.model` | `storyPoints: int` | `Story(id,title,reporter,points)`; `describe()` `@Override` — вызывает `super.describe()` + печатает очки |
 
 **Задача:** Выделите базовый класс `Issue` с общими полями (`id`, `title`, `reporter`) и методом `describe()`. Сделайте `Bug extends Issue` (добавляет `stepsToReproduce`). Добавьте два собрата: `Task extends Issue` (добавляет `estimateHours`) и `Story extends Issue` (добавляет `storyPoints`). Переопределите `describe()` в каждом подклассе так, чтобы вывод зависел от типа. В `Main` положите смешанные объекты в `Issue[]` и вызовите `describe()` для каждого в цикле.
 
@@ -168,6 +221,14 @@
 
 **Тема:** [[05 ООП Интерфейсы и абстракция]] · **Опирается на:** Иерархия Issue
 
+> [!info] Что строим
+> | Действие | Класс | Поля | Методы |
+> |---|---|---|---|
+> | Изменить | **`Issue`** (сделать `abstract`) | — | `getSummary(): String` — абстрактный, реализуется каждым подклассом |
+> | Создать | интерфейс `Reportable` в `tracker.model` | — | `generateReport(): String` |
+> | Создать | интерфейс `Assignable` в `tracker.model` | — | `assignTo(String user)`, `getAssignee(): String` |
+> | Изменить | **`Bug`**, **`Task`**, **`Story`** | `assignee: String` | реализуют `Reportable` и `Assignable`; `getSummary()` — возвращает однострочное описание |
+
 **Задача:** Сделайте `Issue` **абстрактным** классом с абстрактным методом `getSummary()`. Определите два интерфейса: `Reportable { String generateReport(); }` и `Assignable { void assignTo(String user); String getAssignee(); }`. Пусть конкретные issue реализуют их. В `Main` держите объекты через ссылку на интерфейс (например, `Reportable r = bug;`) и вызывайте методы интерфейса.
 
 **Критерии приёмки:**
@@ -186,6 +247,14 @@
 ## Enum'ы Severity и Status
 
 **Тема:** [[06 Перечисления Enum]] · **Опирается на:** Интерфейсы и абстракция, Логика триажа
+
+> [!info] Что строим
+> | Действие | Класс | Поля | Методы |
+> |---|---|---|---|
+> | Создать | enum `Severity` в `tracker.model` | `weight: int` (private) | конструктор `Severity(int weight)`; `getWeight(): int` |
+> | Создать | enum `Status` в `tracker.model` | константы: `NEW`, `IN_PROGRESS`, `RESOLVED`, `CLOSED`, `REOPENED` | `canTransitionTo(Status next): boolean` — true только для допустимых переходов |
+> | Изменить | **`Issue`** | `status: Status` | геттер/сеттер для status |
+> | Изменить | **`Bug`** | тип `severity`: `int` → `Severity` | обновить `getPriorityScore()` — использует `severity.getWeight()` |
 
 **Задача:** Замените сырой `int severityLevel` на enum `Severity { LOW(1), MEDIUM(2), HIGH(3), CRITICAL(4) }`, который хранит поле `weight` и предоставляет `getWeight()`. Добавьте enum `Status { NEW, IN_PROGRESS, RESOLVED, CLOSED, REOPENED }` и дайте `Issue` поле `Status`. Добавьте метод `boolean canTransitionTo(Status next)`, разрешающий только осмысленные переходы (например, `NEW → IN_PROGRESS`, но не `CLOSED → IN_PROGRESS`). Переведите `switch` триажа на работу с `Severity`.
 
@@ -206,6 +275,11 @@
 
 **Тема:** [[07 Строки подробно]] · **Опирается на:** Enum'ы Severity и Status
 
+> [!info] Что строим
+> | Действие | Класс | Поля | Методы |
+> |---|---|---|---|
+> | Создать | `ReportFormatter` в `tracker.util` | — | `format(Issue): String` — строит многострочный отчёт через `StringBuilder`; `formatKey(String prefix, int id): String` — возвращает напр. `BUG-001`; `parseKey(String key): int` — парсит `BUG-001` → `1`; `validateEmail(String email): boolean` — проверяет regex |
+
 **Задача:** Создайте `ReportFormatter` в `com.innowise.tracker.util`. С помощью `StringBuilder` соберите многострочный текстовый отчёт по `Issue` (ключ, title, severity, status, reporter, assignee). Проверьте email репортёра через **regex**. Сформируйте читаемый ключ задачи вида `BUG-001` через `String.format` с дополнением нулями и напишите метод, который парсит такой ключ обратно в число через `split`.
 
 **Критерии приёмки:**
@@ -224,6 +298,12 @@
 ## Ссылки и равенство
 
 **Тема:** [[08 Модель памяти Java]] · **Опирается на:** Класс Bug, Форматтер отчётов
+
+> [!info] Что строим
+> | Действие | Класс | Поля | Методы |
+> |---|---|---|---|
+> | Создать | `MemoryDemo` в `tracker` | — | `run()` — демонстрирует изменение по общей ссылке, независимость копии, дедупликацию в HashSet |
+> | Изменить | **`Bug`** | — | `Bug(Bug other)` копирующий конструктор — создаёт независимую копию |
 
 **Задача:** Создайте класс `MemoryDemo`, доказывающий, что вы понимаете ссылки. Покажите, что две переменные, указывающие на **один и тот же** `Bug`, видят изменения друг друга. Добавьте **конструктор копирования** `Bug(Bug other)`, создающий независимую копию. Положите несколько багов (включая два с одинаковым `id`) в `HashSet<Bug>` и покажите, что дубликат отклоняется. Добавьте короткие комментарии про stack vs heap и `==` vs `equals()`.
 
@@ -244,6 +324,13 @@
 
 **Тема:** [[09 Дженерики]] · **Опирается на:** Иерархия Issue, Ссылки и равенство
 
+> [!info] Что строим
+> | Действие | Класс | Поля | Методы |
+> |---|---|---|---|
+> | Создать | интерфейс `Repository<T>` в `tracker.repository` | — | `add(T)`, `getById(int): T`, `getAll(): List<T>`, `remove(int)` |
+> | Создать | `InMemoryRepository<T>` в `tracker.repository` | `List<T> store` (временно) | реализует все четыре метода выше |
+> | Добавить хелпер | в любом месте | — | `<T extends Issue> void printSummaries(List<T>)` — вызывает `getSummary()` для каждого |
+
 **Задача:** Определите generic-интерфейс `Repository<T>` с `add(T)`, `getById(int id)`, `getAll()` и `remove(int id)`. Сделайте первую реализацию `InMemoryRepository<T>` (хранилище пока может быть простым списком — оно улучшится в следующем задании). Добавьте generic-хелпер с ограничением `<T extends Issue> void printSummaries(List<T> issues)`, который вызывает `getSummary()` для каждого.
 
 **Критерии приёмки:**
@@ -262,6 +349,11 @@
 ## Репозиторий на коллекциях
 
 **Тема:** [[10 Массивы и коллекции]] · **Опирается на:** Generic-репозиторий
+
+> [!info] Что строим
+> | Действие | Класс | Поля | Методы |
+> |---|---|---|---|
+> | Изменить | **`InMemoryRepository<T>`** | `List<T>` → `Map<Integer, T> store` | `getById(int)` — поиск по map за O(1); `getAll()` — возвращает защитную копию; `getByStatus(Status): List<T>`; `countBySeverity(): Map<Severity, Integer>` |
 
 **Задача:** Улучшите `InMemoryRepository<T>`, чтобы хранить сущности в `Map<Integer, T>` по ключу id (быстрый поиск, нет дублей id). Добавьте `IssueRepository` (или generic-запросы): `List<T> getAll()`, возвращающий защитную копию, `getByStatus(Status)` и `countBySeverity()`, возвращающий `Map<Severity, Integer>`. Продемонстрируйте `Set`, чтобы доказать уникальность id.
 
@@ -282,6 +374,13 @@
 
 **Тема:** [[11 Обработка исключений]] · **Опирается на:** Репозиторий на коллекциях
 
+> [!info] Что строим
+> | Действие | Класс | Наследует | Когда бросается |
+> |---|---|---|---|
+> | Создать | `IssueNotFoundException` в `tracker.exception` | `RuntimeException` | `getById` — id не найден |
+> | Создать | `DuplicateIssueException` в `tracker.exception` | `RuntimeException` | `add` — id уже существует |
+> | Создать | `InvalidIssueException` в `tracker.exception` | `RuntimeException` | сеттеры / конструктор — плохое значение поля |
+
 **Задача:** Добавьте кастомные исключения в `com.innowise.tracker.exception`: `IssueNotFoundException` (unchecked), `InvalidIssueException` и `DuplicateIssueException`. Пусть `getById` бросает `IssueNotFoundException`, когда id отсутствует, а `add` бросает `DuplicateIssueException` при повторном id. Пусть сеттеры/конструктор `Bug`/`Issue` бросают `InvalidIssueException` при плохих данных. В `Main` оберните вызовы в `try/catch` и выводите дружелюбные сообщения.
 
 **Критерии приёмки:**
@@ -300,6 +399,11 @@
 ## Запросы через Stream и Optional
 
 **Тема:** [[12 Лямбда, Streams и Optional]] · **Опирается на:** Валидация и кастомные исключения
+
+> [!info] Что строим
+> | Действие | Класс | Методы |
+> |---|---|---|
+> | Изменить | **`InMemoryRepository<T>`** | `getById(int): Optional<T>` — оборачивает результат в Optional; `getByIdOrThrow(int): T` — использует `orElseThrow(() -> new IssueNotFoundException(...))`; `filterBySeverity(Severity): List<T>` — stream + filter; `sortedByWeightDesc(): List<T>` — stream + sorted по весу desc; `titles(): List<String>` — stream + map в title; `countByStatus(): Map<Status, Long>` — stream + `Collectors.groupingBy` |
 
 **Задача:** Перепишите запросы репозитория через Stream API. Добавьте: `filterBySeverity(Severity)`, `sortedByWeightDesc()`, `titles()` (отобразить каждый issue в его title), `countByStatus()` через `Collectors.groupingBy`. Измените `getById`, чтобы он возвращал `Optional<T>`, и добавьте `getByIdOrThrow`, использующий `orElseThrow(() -> new IssueNotFoundException(...))`. Используйте лямбды и method references.
 
@@ -320,6 +424,12 @@
 
 **Тема:** [[13 Аннотации и основы Reflection]] · **Опирается на:** Запросы через Stream и Optional
 
+> [!info] Что строим
+> | Действие | Класс | Поля / Элементы | Методы |
+> |---|---|---|---|
+> | Создать | аннотация `@CsvColumn` в `tracker.annotation` | `name: String` | — (используется как `@CsvColumn("имя_колонки")` на полях Bug) |
+> | Создать | `CsvMapper` в `tracker.util` | — | `toHeader(Class<?>): String` — читает имена `@CsvColumn` через reflection → заголовок CSV; `toRow(Object): String` — читает значения полей → строка данных CSV |
+
 **Задача:** Создайте runtime-аннотацию `@CsvColumn(String name)` и поставьте её на те поля `Bug`, которые хотите экспортировать. Напишите `CsvMapper`, который через **reflection** читает каждое поле с `@CsvColumn` у объекта и строит (а) строку заголовка CSV из имён колонок и (б) строку данных CSV из значений полей.
 
 **Критерии приёмки:**
@@ -338,6 +448,11 @@
 ## Сохранение в файл
 
 **Тема:** [[14 Файловый ввод-вывод]] · **Опирается на:** Аннотации и Reflection, Репозиторий на коллекциях
+
+> [!info] Что строим
+> | Действие | Класс | Поля | Методы |
+> |---|---|---|---|
+> | Создать | `IssueFileStorage` в `tracker.io` | — | `save(InMemoryRepository, Path)` — пишет CSV через CsvMapper; `load(Path): InMemoryRepository` — читает CSV, восстанавливает объекты Bug |
 
 **Задача:** Создайте `IssueFileStorage` в `com.innowise.tracker.io`. `save(repository, path)` записывает все issue в `issues.csv` (заголовок из `CsvMapper`, по строке на issue). `load(path)` читает файл обратно, восстанавливает объекты `Bug` и кладёт их в свежий репозиторий. Используйте try-with-resources и обрабатывайте `IOException`.
 
@@ -358,6 +473,13 @@
 
 **Тема:** [[15 Сборочные инструменты Maven Gradle]] · **Опирается на:** Сохранение в файл (вся кодовая база)
 
+> [!info] Что строим
+> | Действие | Файл | Что добавить |
+> |---|---|---|
+> | Создать | `pom.xml` в корне проекта | `groupId: com.innowise`, `artifactId: qa-tracker`, Java 21, зависимость JUnit 5 с scope test |
+> | Переместить | все исходники | в `src/main/java/com/innowise/tracker/...` по структуре пакетов |
+> | Создать | дерево `src/test/java/` | пустое пока — тесты добавляются в задании 16 |
+
 **Задача:** Превратите проект в Maven-проект. Добавьте `pom.xml` (`groupId` `com.innowise`, `artifactId` `qa-tracker`, Java 21). Перенесите исходники в `src/main/java` по папкам пакетов и создайте пустое дерево `src/test/java`. Добавьте зависимость JUnit 5 сейчас (Selenium добавим в последнем задании). Соберите из терминала.
 
 **Критерии приёмки:**
@@ -377,6 +499,14 @@
 
 **Тема:** [[16 Модульное тестирование с JUnit 5]] · **Опирается на:** Перевод проекта на Maven
 
+> [!info] Что строим
+> | Действие | Тест-класс | Что тестирует |
+> |---|---|---|
+> | Создать | `BugTest` в `src/test/java` | валидация Bug (пустой title бросает исключение), equals/hashCode по id |
+> | Создать | `SeverityTest` | `Severity.getWeight()`, `Status.canTransitionTo()` |
+> | Создать | `RepositoryTest` | CRUD, `assertThrows` для `IssueNotFoundException` и `DuplicateIssueException`, один Stream-запрос |
+> | Создать | `TriageTest` | `@ParameterizedTest` с `@CsvSource` — несколько значений severity → ожидаемая метка |
+
 **Задача:** Напишите юнит-тесты в `src/test/java` для написанной логики. Покройте: валидацию и равенство `Bug`, `Severity.getWeight()`, `Status.canTransitionTo()`, CRUD репозитория, включая `assertThrows` для not-found и duplicate, и хотя бы один Stream-запрос. Добавьте **параметризованный тест** для логики триажа. Используйте `@BeforeEach` для создания свежего репозитория на каждый тест.
 
 **Критерии приёмки:**
@@ -395,6 +525,11 @@
 ## UI-тесты на Selenium
 
 **Тема:** [[17 Основы Selenium WebDriver]] · **Опирается на:** Модульные тесты на JUnit 5
+
+> [!info] Что строим
+> | Действие | Тест-класс | Что делает |
+> |---|---|---|
+> | Создать | `LoginTest` в `src/test/java` | `@BeforeEach` создаёт WebDriver; `@AfterEach` вызывает `driver.quit()`; тест 1 — валидный логин → проверка успеха; тест 2 — неверный логин → проверка сообщения об ошибке; использует `WebDriverWait` + `ExpectedConditions` |
 
 **Задача:** Добавьте зависимость Selenium и напишите класс JUnit + Selenium-тестов против публичного учебного сайта — `https://www.saucedemo.com` или `https://the-internet.herokuapp.com/login`. Откройте страницу, войдите с верными данными и проверьте успех, затем войдите с неверными данными и проверьте сообщение об ошибке. Создавайте драйвер в `@BeforeEach` и вызывайте `quit()` в `@AfterEach`. **Бонус:** когда UI-проверка падает, соберите объект `Bug` (переиспользуя доменную модель), описывающий дефект, и выведите его отчёт через `ReportFormatter`.
 

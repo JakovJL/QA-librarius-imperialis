@@ -67,11 +67,41 @@ variables → Bug class → Issue hierarchy → interfaces → enums → reports
 
 Each step turns the previous "throwaway" code into something more solid: loose variables become a class, the class joins a hierarchy, the hierarchy gets stored in a repository, the repository gets persisted, and finally everything gets tested.
 
+> [!info] Full Class Map — what the finished project contains
+> | Class / Type | Package | Fields | Key Methods |
+> |---|---|---|---|
+> | `Main` | `tracker` | — | `main()` |
+> | `ProjectClass` | `tracker` | `APP_NAME`, `VERSION` | `getAppName()`, `getVersion()` |
+> | `MemoryDemo` | `tracker` | — | `run()` |
+> | `Issue` *(abstract)* | `tracker.model` | `id`, `title`, `reporter`, `status` | `describe()`, `getSummary()`, `canTransitionTo(Status)` |
+> | `Bug` | `tracker.model` | `stepsToReproduce`, `resolved`, `createdDayOfYear`, `severity` | `getPriorityScore()`, `describe()`, `getSummary()`, `Bug(Bug other)` copy constructor |
+> | `Task` | `tracker.model` | `estimateHours` | `describe()`, `getSummary()` |
+> | `Story` | `tracker.model` | `storyPoints` | `describe()`, `getSummary()` |
+> | `Severity` *(enum)* | `tracker.model` | `weight: int` | `getWeight()` |
+> | `Status` *(enum)* | `tracker.model` | — | `canTransitionTo(Status)` |
+> | `Reportable` *(interface)* | `tracker.model` | — | `generateReport()` |
+> | `Assignable` *(interface)* | `tracker.model` | — | `assignTo(String)`, `getAssignee()` |
+> | `ReportFormatter` | `tracker.util` | — | `format(Issue)`, `formatKey(String,int)`, `parseKey(String)`, `validateEmail(String)` |
+> | `Repository<T>` *(interface)* | `tracker.repository` | — | `add(T)`, `getById(int)`, `getAll()`, `remove(int)` |
+> | `InMemoryRepository<T>` | `tracker.repository` | `Map<Integer,T> store` | all above + `getByStatus(Status)`, `countBySeverity()`, `filterBySeverity(Severity)`, `sortedByWeightDesc()`, `titles()`, `countByStatus()`, `getByIdOrThrow(int)` |
+> | `IssueNotFoundException` | `tracker.exception` | — | `IssueNotFoundException(String)` |
+> | `InvalidIssueException` | `tracker.exception` | — | `InvalidIssueException(String)` |
+> | `DuplicateIssueException` | `tracker.exception` | — | `DuplicateIssueException(String)` |
+> | `@CsvColumn` *(annotation)* | `tracker.annotation` | `name: String` | — |
+> | `CsvMapper` | `tracker.util` | — | `toHeader(Class<?>)`, `toRow(Object)` |
+> | `IssueFileStorage` | `tracker.io` | — | `save(repo, path)`, `load(path)` |
+
 ---
 
 ## Project Setup
 
 **Topic:** [[00 Java Fundamentals]] · **Builds on:** nothing — this is the start
+
+> [!info] What to build
+> | Action | Class | Fields | Methods |
+> |---|---|---|---|
+> | Create | `Main` in `tracker` | — | `main()` — prints banner |
+> | Create | `ProjectClass` in `tracker` | `APP_NAME: String`, `VERSION: String` (both `static final`) | `getAppName()`, `getVersion()` |
 
 **Task:** Install the JDK (21+) and create a new IntelliJ IDEA project named `qa-tracker`. Create the base package `com.innowise.tracker` and a `Main` class inside it. In `main`, print a welcome banner such as `=== QA Issue Tracker v0.1 ===`. Store the application name and version in constants.
 
@@ -92,6 +122,11 @@ Each step turns the previous "throwaway" code into something more solid: loose v
 
 **Topic:** [[01 Variables Data Types Operators]] · **Builds on:** Project Setup
 
+> [!info] What to build
+> | Action | Class | Variables (local, no class yet) | What to compute |
+> |---|---|---|---|
+> | Modify | `Main` | `id: int`, `title: String`, `reporter: String`, `severityLevel: int`, `resolved: boolean`, `createdDayOfYear: int` | `ageInDays` = today − createdDayOfYear; `priorityScore` = severityLevel × 10 |
+
 **Task:** Inside `main`, describe **one** bug using local variables only (no class yet): `id` (int), `title` (String), `reporter` (String), `severityLevel` (int, 1–4), `resolved` (boolean), and `createdDayOfYear` (int). Pick a "today" value and compute the bug's **age in days** with arithmetic. Compute a **priority score** = `severityLevel * 10` (use operators). Print every value and both computed numbers in a readable format.
 
 **Acceptance criteria:**
@@ -110,6 +145,11 @@ Each step turns the previous "throwaway" code into something more solid: loose v
 ## Triage Logic
 
 **Topic:** [[02 Control Flow]] · **Builds on:** Modeling a Bug with Variables
+
+> [!info] What to build
+> | Action | Class | What to add |
+> |---|---|---|
+> | Modify | `Main` | `switch` on severityLevel → label string; `if/else` escalation (severity ≥ 3 && !resolved); `for` loop over `int[]` of severities; `while` loop counting High/Critical |
 
 **Task:** Write triage logic that turns a `severityLevel` into a priority label. Use a `switch` on the severity (1→"Low", 2→"Medium", 3→"High", 4→"Critical", anything else→"Unknown"). Then use `if/else` to mark a bug as "Escalated" when it is `severity >= 3` **and** not resolved. Finally, loop over an `int[]` of several severities and **count** how many are High or Critical, printing the total.
 
@@ -130,6 +170,11 @@ Each step turns the previous "throwaway" code into something more solid: loose v
 
 **Topic:** [[03 OOP Basics]] · **Builds on:** Modeling a Bug with Variables, Triage Logic
 
+> [!info] What to build
+> | Action | Class | Fields | Methods |
+> |---|---|---|---|
+> | Create | `Bug` in `tracker.model` | `id: int`, `title: String`, `reporter: String`, `resolved: boolean`, `createdDayOfYear: LocalDate`, `severity: Severity` | `Bug(id,title,reporter,resolved,date,severity)` full constructor; `Bug(id,title,reporter,severity)` short via `this(...)`; getters/setters (setTitle validates not blank; setSeverity validates not null); `getPriorityScore()` → severity.weight × 10; `toString()`; `equals()`/`hashCode()` by id only |
+
 **Task:** Turn the loose variables from exercise 01 into a real `Bug` class in `com.innowise.tracker.model`. Add a parameterized constructor and an overloaded one (constructor chaining with `this(...)`). Make fields `private` with getters/setters; the setters must validate (title not blank, severity 1–4). Override `toString()`, and override `equals()`/`hashCode()` based on `id` only. In `Main`, create several `Bug` objects and print them.
 
 **Acceptance criteria:**
@@ -148,6 +193,14 @@ Each step turns the previous "throwaway" code into something more solid: loose v
 ## The Issue Hierarchy
 
 **Topic:** [[04 OOP Inheritance Polymorphism]] · **Builds on:** The Bug Class
+
+> [!info] What to build
+> | Action | Class | Fields | Methods |
+> |---|---|---|---|
+> | Create | `Issue` in `tracker.model` | `id: int`, `title: String`, `reporter: String` (moved from Bug) | `Issue(id,title,reporter)`; `describe()` — prints id, title, reporter; getters/setters |
+> | Modify | **`Bug`** | `stepsToReproduce: String` (new) | `describe()` `@Override` — calls `super.describe()` + prints steps |
+> | Create | `Task` in `tracker.model` | `estimateHours: int` | `Task(id,title,reporter,hours)`; `describe()` `@Override` — calls `super.describe()` + prints hours |
+> | Create | `Story` in `tracker.model` | `storyPoints: int` | `Story(id,title,reporter,points)`; `describe()` `@Override` — calls `super.describe()` + prints points |
 
 **Task:** Extract a base class `Issue` holding the common fields (`id`, `title`, `reporter`) and a method `describe()`. Make `Bug extends Issue` (adds `stepsToReproduce`). Add two siblings: `Task extends Issue` (adds `estimateHours`) and `Story extends Issue` (adds `storyPoints`). Override `describe()` in each subclass so the output is type-specific. In `Main`, put mixed objects into an `Issue[]` and call `describe()` on each in a loop.
 
@@ -168,6 +221,14 @@ Each step turns the previous "throwaway" code into something more solid: loose v
 
 **Topic:** [[05 OOP Interfaces Abstraction]] · **Builds on:** The Issue Hierarchy
 
+> [!info] What to build
+> | Action | Class | Fields | Methods |
+> |---|---|---|---|
+> | Modify | **`Issue`** (make `abstract`) | — | `getSummary(): String` — abstract, implemented by each subclass |
+> | Create | `Reportable` interface in `tracker.model` | — | `generateReport(): String` |
+> | Create | `Assignable` interface in `tracker.model` | — | `assignTo(String user)`, `getAssignee(): String` |
+> | Modify | **`Bug`**, **`Task`**, **`Story`** | `assignee: String` | implement `Reportable` and `Assignable`; `getSummary()` returns a one-line description |
+
 **Task:** Make `Issue` an **abstract** class with an abstract method `getSummary()`. Define two interfaces: `Reportable { String generateReport(); }` and `Assignable { void assignTo(String user); String getAssignee(); }`. Have the concrete issues implement them. In `Main`, hold objects through an interface reference (e.g. `Reportable r = bug;`) and call the interface methods.
 
 **Acceptance criteria:**
@@ -186,6 +247,14 @@ Each step turns the previous "throwaway" code into something more solid: loose v
 ## Severity and Status Enums
 
 **Topic:** [[06 Enums]] · **Builds on:** Interfaces and Abstraction, Triage Logic
+
+> [!info] What to build
+> | Action | Class | Fields | Methods |
+> |---|---|---|---|
+> | Create | `Severity` enum in `tracker.model` | `weight: int` (private) | `Severity(int weight)` constructor; `getWeight(): int` |
+> | Create | `Status` enum in `tracker.model` | constants: `NEW`, `IN_PROGRESS`, `RESOLVED`, `CLOSED`, `REOPENED` | `canTransitionTo(Status next): boolean` — returns true only for valid transitions |
+> | Modify | **`Issue`** | `status: Status` | add getter/setter for status |
+> | Modify | **`Bug`** | `severity` type: `int` → `Severity` | update `getPriorityScore()` to use `severity.getWeight()` |
 
 **Task:** Replace the raw `int severityLevel` with an enum `Severity { LOW(1), MEDIUM(2), HIGH(3), CRITICAL(4) }` that stores a `weight` field and exposes `getWeight()`. Add a `Status { NEW, IN_PROGRESS, RESOLVED, CLOSED, REOPENED }` enum and give `Issue` a `Status` field. Add a method `boolean canTransitionTo(Status next)` that allows only sensible transitions (e.g. `NEW → IN_PROGRESS`, not `CLOSED → IN_PROGRESS`). Move the triage `switch` to work on `Severity`.
 
@@ -206,6 +275,11 @@ Each step turns the previous "throwaway" code into something more solid: loose v
 
 **Topic:** [[07 String in Depth]] · **Builds on:** Severity and Status Enums
 
+> [!info] What to build
+> | Action | Class | Fields | Methods |
+> |---|---|---|---|
+> | Create | `ReportFormatter` in `tracker.util` | — | `format(Issue): String` — builds multi-line report via `StringBuilder`; `formatKey(String prefix, int id): String` — returns e.g. `BUG-001`; `parseKey(String key): int` — parses `BUG-001` → `1`; `validateEmail(String email): boolean` — checks with regex |
+
 **Task:** Create `ReportFormatter` in `com.innowise.tracker.util`. Using a `StringBuilder`, build a multi-line text report for an `Issue` (key, title, severity, status, reporter, assignee). Validate the reporter's email with a **regex**. Produce a human-readable issue key like `BUG-001` with `String.format` and zero-padding, and write a method that parses such a key back into its number using `split`.
 
 **Acceptance criteria:**
@@ -224,6 +298,12 @@ Each step turns the previous "throwaway" code into something more solid: loose v
 ## References and Equality
 
 **Topic:** [[08 Java Memory Model]] · **Builds on:** The Bug Class, The Report Formatter
+
+> [!info] What to build
+> | Action | Class | Fields | Methods |
+> |---|---|---|---|
+> | Create | `MemoryDemo` in `tracker` | — | `run()` — shows shared-reference mutation, copy independence, HashSet dedup |
+> | Modify | **`Bug`** | — | `Bug(Bug other)` copy constructor — creates independent copy |
 
 **Task:** Create a `MemoryDemo` class that proves you understand references. Show that two variables pointing at the **same** `Bug` see each other's mutations. Add a **copy constructor** `Bug(Bug other)` that produces an independent copy. Put several bugs (including two with the same `id`) into a `HashSet<Bug>` and show that the duplicate is rejected. Add short comments explaining stack vs heap and `==` vs `equals()`.
 
@@ -244,6 +324,13 @@ Each step turns the previous "throwaway" code into something more solid: loose v
 
 **Topic:** [[09 Generics]] · **Builds on:** The Issue Hierarchy, References and Equality
 
+> [!info] What to build
+> | Action | Class | Fields | Methods |
+> |---|---|---|---|
+> | Create | `Repository<T>` interface in `tracker.repository` | — | `add(T)`, `getById(int): T`, `getAll(): List<T>`, `remove(int)` |
+> | Create | `InMemoryRepository<T>` in `tracker.repository` | `List<T> store` (temporary) | implements all four methods above |
+> | Add helper | anywhere | — | `<T extends Issue> void printSummaries(List<T>)` — calls `getSummary()` on each |
+
 **Task:** Define a generic interface `Repository<T>` with `add(T)`, `getById(int id)`, `getAll()`, and `remove(int id)`. Provide a first implementation `InMemoryRepository<T>` (storage can be a simple list for now — it gets upgraded next exercise). Add a bounded generic helper method `<T extends Issue> void printSummaries(List<T> issues)` that calls `getSummary()` on each.
 
 **Acceptance criteria:**
@@ -262,6 +349,11 @@ Each step turns the previous "throwaway" code into something more solid: loose v
 ## Collections-Backed Repository
 
 **Topic:** [[10 Arrays and Collections]] · **Builds on:** The Generic Repository
+
+> [!info] What to build
+> | Action | Class | Fields | Methods |
+> |---|---|---|---|
+> | Modify | **`InMemoryRepository<T>`** | `List<T>` → `Map<Integer, T> store` | `getById(int)` — O(1) map lookup; `getAll()` — returns defensive copy; `getByStatus(Status): List<T>`; `countBySeverity(): Map<Severity, Integer>` |
 
 **Task:** Upgrade `InMemoryRepository<T>` to store entities in a `Map<Integer, T>` keyed by id (fast lookup, no duplicate ids). Add an `IssueRepository` (or generic queries) with: `List<T> getAll()` returning a defensive copy, `getByStatus(Status)`, and `countBySeverity()` returning a `Map<Severity, Integer>`. Demonstrate a `Set` to prove ids are unique.
 
@@ -282,6 +374,13 @@ Each step turns the previous "throwaway" code into something more solid: loose v
 
 **Topic:** [[11 Exception Handling]] · **Builds on:** Collections-Backed Repository
 
+> [!info] What to build
+> | Action | Class | Extends | When thrown |
+> |---|---|---|---|
+> | Create | `IssueNotFoundException` in `tracker.exception` | `RuntimeException` | `getById` — id not found |
+> | Create | `DuplicateIssueException` in `tracker.exception` | `RuntimeException` | `add` — id already exists |
+> | Create | `InvalidIssueException` in `tracker.exception` | `RuntimeException` | setters / constructor — bad field value |
+
 **Task:** Add custom exceptions in `com.innowise.tracker.exception`: `IssueNotFoundException` (unchecked), `InvalidIssueException`, and `DuplicateIssueException`. Make `getById` throw `IssueNotFoundException` when the id is missing, and `add` throw `DuplicateIssueException` on a repeated id. Make the `Bug`/`Issue` setters/constructor throw `InvalidIssueException` for bad data. In `Main`, wrap calls in `try/catch` and print friendly messages.
 
 **Acceptance criteria:**
@@ -300,6 +399,11 @@ Each step turns the previous "throwaway" code into something more solid: loose v
 ## Stream Queries and Optional
 
 **Topic:** [[12 Lambda, Streams and Optional]] · **Builds on:** Validation and Custom Exceptions
+
+> [!info] What to build
+> | Action | Class | Methods |
+> |---|---|---|
+> | Modify | **`InMemoryRepository<T>`** | `getById(int): Optional<T>` — wraps result in Optional; `getByIdOrThrow(int): T` — uses `orElseThrow(() -> new IssueNotFoundException(...))`; `filterBySeverity(Severity): List<T>` — stream + filter; `sortedByWeightDesc(): List<T>` — stream + sorted by weight reversed; `titles(): List<String>` — stream + map to title; `countByStatus(): Map<Status, Long>` — stream + `Collectors.groupingBy` |
 
 **Task:** Rewrite the repository queries using the Stream API. Add: `filterBySeverity(Severity)`, `sortedByWeightDesc()`, `titles()` (map each issue to its title), `countByStatus()` using `Collectors.groupingBy`. Change `getById` to return `Optional<T>`, and add `getByIdOrThrow` that uses `orElseThrow(() -> new IssueNotFoundException(...))`. Use lambdas and method references.
 
@@ -320,6 +424,12 @@ Each step turns the previous "throwaway" code into something more solid: loose v
 
 **Topic:** [[13 Annotations and Reflection Basics]] · **Builds on:** Stream Queries and Optional
 
+> [!info] What to build
+> | Action | Class | Fields / Elements | Methods |
+> |---|---|---|---|
+> | Create | `@CsvColumn` annotation in `tracker.annotation` | `name: String` | — (used as `@CsvColumn("col_name")` on Bug fields) |
+> | Create | `CsvMapper` in `tracker.util` | — | `toHeader(Class<?>): String` — reads `@CsvColumn` names via reflection → CSV header; `toRow(Object): String` — reads field values → CSV data row |
+
 **Task:** Create a runtime annotation `@CsvColumn(String name)` and put it on the `Bug` fields you want to export. Write a `CsvMapper` that uses **reflection** to read every `@CsvColumn` field of an object and build (a) a CSV header line from the column names and (b) a CSV data row from the field values.
 
 **Acceptance criteria:**
@@ -338,6 +448,11 @@ Each step turns the previous "throwaway" code into something more solid: loose v
 ## File Persistence
 
 **Topic:** [[14 File I-O]] · **Builds on:** Annotations and Reflection, Collections-Backed Repository
+
+> [!info] What to build
+> | Action | Class | Fields | Methods |
+> |---|---|---|---|
+> | Create | `IssueFileStorage` in `tracker.io` | — | `save(InMemoryRepository, Path)` — writes CSV via CsvMapper; `load(Path): InMemoryRepository` — reads CSV, rebuilds Bug objects |
 
 **Task:** Create `IssueFileStorage` in `com.innowise.tracker.io`. `save(repository, path)` writes all issues to `issues.csv` (header from `CsvMapper`, one row per issue). `load(path)` reads the file back, rebuilds `Bug` objects, and puts them into a fresh repository. Use try-with-resources and handle `IOException`.
 
@@ -358,6 +473,13 @@ Each step turns the previous "throwaway" code into something more solid: loose v
 
 **Topic:** [[15 Build Tools Maven Gradle]] · **Builds on:** File Persistence (the whole codebase)
 
+> [!info] What to build
+> | Action | File | What to add |
+> |---|---|---|
+> | Create | `pom.xml` at project root | `groupId: com.innowise`, `artifactId: qa-tracker`, Java 21, JUnit 5 test dependency |
+> | Move | all source files | into `src/main/java/com/innowise/tracker/...` mirroring package structure |
+> | Create | `src/test/java/` tree | empty for now — tests go here in exercise 16 |
+
 **Task:** Convert the project into a Maven project. Add a `pom.xml` (`groupId` `com.innowise`, `artifactId` `qa-tracker`, Java 21). Move your sources into `src/main/java` following the package folders, and create the empty `src/test/java` tree. Add the JUnit 5 dependency now (Selenium is added in the last exercise). Build from the terminal.
 
 **Acceptance criteria:**
@@ -377,6 +499,14 @@ Each step turns the previous "throwaway" code into something more solid: loose v
 
 **Topic:** [[16 Unit Testing with JUnit 5]] · **Builds on:** Mavenize the Project
 
+> [!info] What to build
+> | Action | Test class | What it tests |
+> |---|---|---|
+> | Create | `BugTest` in `src/test/java` | Bug validation (blank title throws), equals/hashCode by id |
+> | Create | `SeverityTest` | `Severity.getWeight()`, `Status.canTransitionTo()` |
+> | Create | `RepositoryTest` | CRUD, `assertThrows` for `IssueNotFoundException` and `DuplicateIssueException`, one Stream query |
+> | Create | `TriageTest` | `@ParameterizedTest` with `@CsvSource` — several severity inputs → expected label |
+
 **Task:** Write unit tests under `src/test/java` for the logic you built. Cover: `Bug` validation and equality, `Severity.getWeight()`, `Status.canTransitionTo()`, repository CRUD including `assertThrows` for not-found and duplicate, and at least one Stream query. Add a **parameterized test** for the triage logic. Use `@BeforeEach` to create a fresh repository per test.
 
 **Acceptance criteria:**
@@ -395,6 +525,11 @@ Each step turns the previous "throwaway" code into something more solid: loose v
 ## Selenium UI Tests
 
 **Topic:** [[17 Selenium WebDriver Basics]] · **Builds on:** Unit Tests with JUnit 5
+
+> [!info] What to build
+> | Action | Test class | What it does |
+> |---|---|---|
+> | Create | `LoginTest` in `src/test/java` | `@BeforeEach` creates WebDriver; `@AfterEach` calls `driver.quit()`; test 1 — valid login → assert success; test 2 — invalid login → assert error message; uses `WebDriverWait` + `ExpectedConditions` |
 
 **Task:** Add the Selenium dependency and write a JUnit + Selenium test class against a public practice site — `https://www.saucedemo.com` or `https://the-internet.herokuapp.com/login`. Open the page, log in with valid credentials and assert success, then log in with invalid credentials and assert the error message. Create the driver in `@BeforeEach` and `quit()` it in `@AfterEach`. **Bonus:** when a UI assertion fails, build a `Bug` object (reusing your domain model) describing the defect and print its report via `ReportFormatter`.
 
