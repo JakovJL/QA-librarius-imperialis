@@ -11,6 +11,10 @@
 - [[#Try-With-Resources]]
 - [[#Exception Handling in AQA]]
 - [[#Interview Questions]]
+	- [[#Top 10]]
+	- [[#Tricky Questions]]
+	- [[#Advanced Questions]]
+	- [[#Code Questions]]
 
 **Related notes:** [[AQA Java eng]]
 
@@ -387,3 +391,318 @@ Because it also catches `Error`, and serious JVM problems usually should not be 
 
 **5. What is the difference between `Exception` and `Error`?**  
 `Exception` describes problems application code may handle. `Error` describes serious system-level problems that are usually not recoverable in normal code.
+
+---
+
+### Advanced Questions
+
+**1. Multi-catch vs multiple `catch` blocks — what is the difference?**  
+Multiple `catch` blocks catch exceptions in order — the first match wins. Multi-catch (`catch (IOException | SQLException e)`) catches several types in one block. Restriction: the types in multi-catch cannot be in a parent-child relationship (the compiler would make you use just the parent).
+
+```java
+// ✅ Multiple catch — different actions:
+try { ... }
+catch (FileNotFoundException e) { log("file missing"); }
+catch (IOException e) { log("io error"); }
+
+// ✅ Multi-catch — same action:
+try { ... }
+catch (IOException | SQLException e) { log("db or io error", e); }
+
+// ❌ Error — FileNotFoundException extends IOException:
+// catch (FileNotFoundException | IOException e) { }
+```
+
+**2. How does the JVM handle exceptions internally?**  
+When an exception is thrown, the JVM: (1) creates the exception object (fills the stack trace), (2) looks for a matching `catch` block from the innermost `try` outward (up the call stack), (3) if no `catch` is found, the exception travels up the call stack until it reaches `main`, after which the thread terminates. If the exception is never caught — the program crashes with full stack trace on stderr.
+
+**3. How to read and analyze a stack trace?**  
+Read the stack trace **top to bottom**. The topmost line is the exact throw location. The problem is most likely in your code (not library code) — look for the line with your package name.
+
+```java
+Exception in thread "main" java.lang.NullPointerException
+    at com.myapp.service.UserService.findUser(UserService.java:25) // ← problem here
+    at com.myapp.controller.UserController.getUser(UserController.java:12)
+    at com.myapp.Main.main(Main.java:5)
+```
+
+`e.getMessage()` — short description. `e.getCause()` — original exception (for chaining). `e.printStackTrace()` — full stack trace.
+
+**4. What is exception chaining?**  
+Wrapping one exception inside another while keeping the original cause. This preserves context as the exception travels through application layers.
+
+```java
+try {
+    parseFile(path);
+} catch (IOException e) {
+    throw new RuntimeException("Failed to load config from " + path, e);
+}
+// Later: e.getCause() returns the original IOException
+```
+
+**5. What are suppressed exceptions?**  
+When try-with-resources closes multiple resources, each close exception is **suppressed** in favor of the primary exception. You can get suppressed exceptions via `e.getSuppressed()`. Added in Java 7 to solve the problem of hidden exceptions in finally.
+
+```java
+try (AutoCloseable a = () -> { throw new RuntimeException("A"); };
+     AutoCloseable b = () -> { throw new RuntimeException("B"); }) {
+    throw new RuntimeException("Main");
+}
+// Main: "Main". Suppressed: "A", "B"
+```
+
+**6. What happens if `finally` throws an exception?**  
+It **replaces** the original exception from `try` or `catch`. This is one of the main problems with finally — error information is lost. This is why try-with-resources is safer: it uses suppressed exceptions instead of replacement.
+
+```java
+try {
+    throw new RuntimeException("Original");
+} finally {
+    throw new RuntimeException("Finally"); // ❌ Original is lost
+}
+// Only "Finally" will be seen
+```
+
+**7. Can you use `return` in `try`, `catch`, and `finally`? Which one wins?**  
+`finally` **always** wins. If `try` has a `return` and `finally` has a `return`, the value from `finally` is returned. If `finally` has a `return` and `catch` has a `throw`, the `return` suppresses the exception.
+
+```java
+public int test() {
+    try { return 1; }
+    finally { return 2; } // returns 2, not 1
+}
+```
+
+**8. What are the most common Selenium WebDriver exceptions?**  
+| Exception | When it happens |
+|---|---|
+| `NoSuchElementException` | Element not found in the DOM |
+| `StaleElementReferenceException` | Element was in DOM but disappeared (page refreshed) |
+| `TimeoutException` | Wait condition was not met within the timeout |
+| `ElementClickInterceptedException` | Another element covers the target |
+| `InvalidElementStateException` | Element is in the wrong state (disabled, not visible) |
+| `WebDriverException` | General WebDriver exception (driver crashed, no connection) |
+
+**9. What is the difference between `assert` and exceptions?**  
+`assert` is for self-checks (invariants, post-conditions). Can be disabled at runtime (`-ea` flag). Not meant for production validation.  
+Exceptions — always enabled. In tests, `AssertionError` (thrown by `assertEquals`, `assertTrue`) is an exception, not `assert`.
+
+```java
+// assert — can be disabled:
+assert x > 0 : "x must be positive";
+// Exception — always works:
+if (x <= 0) throw new IllegalArgumentException("x must be positive");
+// In tests:
+Assertions.assertTrue(x > 0); // throws AssertionError — unchecked
+```
+
+**10. When to catch an exception vs when to use `throws`?**  
+Catch when: (1) you can recover (retry, fallback, default value), (2) you want to add context (exception chaining), (3) you must release resources (close, rollback).  
+Declare when: (1) you do not know how to handle it (let the caller decide), (2) in library code (not your job to decide), (3) `throws` is already in the signature and extending it makes sense.
+
+```java
+// Catch — can recover:
+try { return fetchData(); }
+catch (IOException e) { return defaultData; }
+// Declare — not your level:
+public User findUser(int id) throws DataAccessException { ... }
+```
+
+---
+
+### Code Questions
+
+**1. What does this code print?**  
+```java
+public class Test {
+    public static void main(String[] args) { System.out.println(test()); }
+    static int test() {
+        try { return 1; }
+        catch (Exception e) { return 2; }
+        finally { return 3; }
+    }
+}
+```
+**Answer:** `3`. `finally` runs after `try` or `catch` but before the actual return. If `finally` contains a `return`, it replaces any previous return.
+
+**2. What does this code print?**  
+```java
+public class Test {
+    public static void main(String[] args) {
+        try { System.exit(0); }
+        finally { System.out.println("Finally"); }
+    }
+}
+```
+**Answer:** Nothing. `System.exit(0)` stops the JVM immediately. `finally` does not run.
+
+**3. Will this code compile?**  
+```java
+try { throw new IOException(); }
+catch (IOException e) { throw new RuntimeException(e); }
+catch (RuntimeException e) { System.out.println("Caught"); }
+```
+**Answer:** Yes. IOException is caught, wrapped in RuntimeException and rethrown. The second catch catches it — prints "Caught".
+
+**4. What does this code print?**  
+```java
+public class Test {
+    public static void main(String[] args) {
+        try { throw new RuntimeException("Outer"); }
+        catch (RuntimeException e) { throw new RuntimeException("Inner", e); }
+        finally { throw new RuntimeException("Finally"); }
+    }
+}
+```
+**Answer:** Program crashes with `RuntimeException: Finally`. Original "Outer" and "Inner" are lost. Exception from `finally` replaces all previous ones.
+
+**5. What does this code print?**  
+```java
+try (AutoCloseable res = () -> { throw new Exception("Close"); }) {
+    throw new Exception("Work");
+} catch (Exception e) {
+    System.out.println(e.getMessage());
+    for (Throwable s : e.getSuppressed()) {
+        System.out.println("Suppressed: " + s.getMessage());
+    }
+}
+```
+**Answer:**  
+```
+Work
+Suppressed: Close
+```
+The close exception is suppressed in favor of the main one. `getSuppressed()` shows both.
+
+---
+
+### Practical Tasks
+
+> [!tip] How to practice
+> Try to solve each task yourself first, then check the solution.
+
+#### 1. try-catch-finally with return
+
+**Task:** What does this code return and why?
+
+```java
+public int calculate() {
+    try {
+        return 10 / 0;
+    } catch (ArithmeticException e) {
+        return -1;
+    } finally {
+        System.out.println("Finally always runs");
+    }
+}
+```
+
+**Answer:** Returns `-1`. Division by zero throws `ArithmeticException`, caught by catch, returns -1. `finally` runs before the return — prints "Finally always runs".
+
+**Explanation:** `finally` executes after try/catch but before the method actually returns. If `finally` had a `return`, it would override the catch return.
+
+#### 2. Custom exception with chaining
+
+**Task:** Create a custom checked exception `ConfigLoadException` and a method that wraps `IOException` into it.
+
+```java
+public class ConfigLoadException extends Exception {
+    public ConfigLoadException(String message, Throwable cause) {
+        super(message, cause);
+    }
+}
+
+public String loadConfig(String path) throws ConfigLoadException {
+    try {
+        return Files.readString(Path.of(path));
+    } catch (IOException e) {
+        throw new ConfigLoadException("Failed to load config from " + path, e);
+    }
+}
+
+// Usage:
+try {
+    String cfg = loadConfig("app.properties");
+} catch (ConfigLoadException e) {
+    System.out.println(e.getMessage());   // "Failed to load..."
+    System.out.println(e.getCause());     // IOException with details
+}
+```
+
+**Explanation:** Exception chaining preserves the original cause. `getCause()` returns the wrapped `IOException`. This is the standard pattern for wrapping exceptions across layers.
+
+#### 3. Multi-catch — fix the order
+
+**Task:** This code does not compile. Fix it.
+
+```java
+try {
+    // some code that can throw various exceptions
+} catch (Exception e) {
+    log("General error");
+} catch (IOException e) {
+    log("IO error");
+}
+```
+
+**Answer:** Won't compile — `IOException` extends `Exception`, so the first catch already catches everything. Fix: swap the order (more specific first).
+
+```java
+try {
+    // some code
+} catch (IOException e) {
+    log("IO error");
+} catch (Exception e) {
+    log("General error");
+}
+```
+
+**Explanation:** A more specific exception must be caught before a more general one. The compiler checks this at compile time.
+
+#### 4. Try-with-resources — custom resource
+
+**Task:** Create a custom `AutoCloseable` resource and use it in try-with-resources. It should print "Open" on creation and "Close" on close.
+
+```java
+public class DatabaseConnection implements AutoCloseable {
+    public DatabaseConnection() { System.out.println("Open"); }
+    public void query(String sql) { System.out.println("Query: " + sql); }
+    @Override public void close() { System.out.println("Close"); }
+}
+
+// Usage:
+try (DatabaseConnection db = new DatabaseConnection()) {
+    db.query("SELECT * FROM users");
+}
+// Prints:
+// Open
+// Query: SELECT * FROM users
+// Close
+```
+
+**Explanation:** Any class implementing `AutoCloseable` can be used in try-with-resources. `close()` is called automatically even if an exception occurs in the try block.
+
+#### 5. Suppressed exceptions in practice
+
+**Task:** What does this code print?
+
+```java
+try (AutoCloseable a = () -> { throw new RuntimeException("A"); };
+     AutoCloseable b = () -> { throw new RuntimeException("B"); }) {
+    throw new RuntimeException("Main");
+} catch (RuntimeException e) {
+    System.out.println(e.getMessage());
+    for (Throwable s : e.getSuppressed()) {
+        System.out.println("Suppressed: " + s.getMessage());
+    }
+}
+```
+
+**Answer:**
+```
+Main
+Suppressed: A
+Suppressed: B
+```
+
+The main exception is "Main". Both "A" and "B" are suppressed because try-with-resources collects close exceptions without losing the primary one. Without try-with-resources (using finally), "Main" would have been lost.

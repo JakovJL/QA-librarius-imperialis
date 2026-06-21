@@ -11,6 +11,11 @@
 - [[#Iteration and Common Operations]]
 - [[#Arrays and Collections in AQA]]
 - [[#Interview Questions]]
+	- [[#Top 10]]
+	- [[#Tricky Questions]]
+	- [[#Advanced Questions]]
+	- [[#Code Questions]]
+- [[#Practical Tasks]]
 
 **Related notes:** [[AQA Java eng]]
 
@@ -498,6 +503,457 @@ Fail-fast (standard collections) throw on concurrent modification. Fail-safe ite
 
 **7. What is the difference between `Arrays.asList()`, `List.of()`, and `new ArrayList<>()`?**  
 `new ArrayList<>()` is fully mutable. `Arrays.asList()` is fixed-size (set allowed, add/remove not) and backed by the array. `List.of()` is fully **immutable** — any modification throws `UnsupportedOperationException`, and it rejects `null` elements.
+
+**8. When should you use `WeakHashMap`?**  
+`WeakHashMap` uses weak references for keys. If a key has no strong references outside the map, the GC can remove the key and the entry disappears automatically. This is useful for caches where entries should die when the key is no longer used externally, or for event listeners (the listener disappears from the registry when it is no longer referenced).
+
+**9. Why should you avoid `Stack`? What should you use instead?**  
+`Stack` is a legacy class that extends `Vector` (synchronized but slow). It breaks LSP — since `Stack` "is a" `Vector`, you can call `List` methods like `get(index)` or `add(index, value)` on it. Use `ArrayDeque` with `push()/pop()` instead. It is faster, lighter, and was designed for LIFO.
+
+```java
+// ❌ Legacy:
+Stack<String> stack = new Stack<>();
+
+// ✅ Correct:
+Deque<String> stack = new ArrayDeque<>();
+stack.push("a"); stack.pop();
+```
+
+**10. `EnumMap` and `EnumSet` — when to use them?**  
+`EnumMap` and `EnumSet` are very fast (O(1)) and memory-efficient collections for enum keys. `EnumMap` stores values in an array indexed by the enum's `ordinal()` — no hash code calculation needed. `EnumSet` uses a bit mask inside `long[]`, making it extremely compact. Use them when the key is an enum and you want maximum performance.
+
+```java
+enum Status { ACTIVE, INACTIVE, BANNED }
+Map<Status, List<User>> usersByStatus = new EnumMap<>(Status.class);
+Set<Status> activeStatuses = EnumSet.of(Status.ACTIVE, Status.INACTIVE);
+```
+
+---
+
+### Code Questions
+
+**1. What does this code print?**  
+```java
+List<String> strings = new ArrayList<>();
+List<Integer> integers = new ArrayList<>();
+System.out.println(strings.getClass() == integers.getClass());
+```
+**Answer:** `true`. At runtime, both are `ArrayList`. The `<String>` and `<Integer>` type information is erased by type erasure.
+
+**2. Will this code compile?**  
+```java
+List<? extends Number> nums = new ArrayList<Integer>();
+nums.add(42);
+```
+**Answer:** No. `nums` is covariant — it could be `List<Integer>`, `List<Double>`, or any other subtype. The compiler cannot guarantee that `42` is the correct type for the unknown subtype of `Number`. Reading is safe — writing is not.
+
+**3. Will this code compile?**  
+```java
+public void addToList(List<?> list) {
+    list.add("hello");
+}
+```
+**Answer:** No. `List<?>` means "unknown type." You can read elements as `Object`, but the only thing you can add is `null`. The compiler blocks writes to prevent breaking type safety.
+
+**4. What does this code print?**  
+```java
+Set<Short> set = new HashSet<>();
+for (short i = 0; i < 10; i++) {
+    set.add(i);
+    set.remove(i - 1); // (int) i - 1
+}
+System.out.println(set.size());
+```
+**Answer:** 10. The bug is that `i - 1` is `int`, not `short`. `set.remove(Integer.valueOf(i-1))` looks for an `Integer`, but the set stores `Short` values. Nothing is ever removed.
+
+**5. What does this code print?**  
+```java
+List<Integer> list = new ArrayList<>(List.of(1, 2, 3, 4, 5));
+list.subList(1, 3).clear();
+System.out.println(list);
+```
+**Answer:** `[1, 4, 5]`. `subList()` returns a **view** of the original list, not a copy. Calling `clear()` on the sublist removes those elements from the original list.
+
+---
+
+### Practical Tasks
+
+Tasks are ordered by the lecture sequence: Arrays → ArrayList → Set → Map → Queue → combo. Each task includes a solution, explanation, and complexity analysis.
+
+> [!tip] How to practice
+> Try to solve each task yourself first, then check the solution. Pay attention to the data structure choice — that is half the answer in an interview.
+
+---
+
+#### 1. Reverse Array — reverse an array in place
+
+**Task:** Given an integer array, reverse it **in place** without using another array.
+
+```java
+public void reverse(int[] arr) {
+    int left = 0, right = arr.length - 1;
+    while (left < right) {
+        int tmp = arr[left];
+        arr[left] = arr[right];
+        arr[right] = tmp;
+        left++;
+        right--;
+    }
+}
+```
+
+**Explanation:** Two-pointer technique. One starts at the beginning, one at the end — swap and move towards the center.
+
+| Metric | Value |
+|---|---|
+| Complexity | O(n) time, O(1) memory |
+| Key technique | Two pointers (left/right) |
+
+---
+
+#### 2. Find Missing Number — find the missing number
+
+**Task:** Given an array of `n` numbers in the range `[0, n]`, one number is missing. Find it.
+
+```java
+// Solution 1 — using HashSet (for collections understanding):
+public int missingNumberSet(int[] nums) {
+    Set<Integer> set = new HashSet<>();
+    for (int n : nums) set.add(n);
+    for (int i = 0; i <= nums.length; i++) {
+        if (!set.contains(i)) return i;
+    }
+    return -1;
+}
+
+// Solution 2 — math (O(1) memory):
+public int missingNumberMath(int[] nums) {
+    int n = nums.length;
+    int expected = n * (n + 1) / 2;
+    int sum = 0;
+    for (int num : nums) sum += num;
+    return expected - sum;
+}
+```
+
+**Explanation:** HashSet gives O(1) membership checks — straightforward. The math version uses the arithmetic series sum formula and is lighter on memory.
+
+| Metric | Value |
+|---|---|
+| Complexity | O(n) time, O(n) or O(1) memory |
+| Key structure | `HashSet<Integer>` or math sum |
+
+---
+
+#### 3. Remove Duplicates from ArrayList
+
+**Task:** Given an `ArrayList<String>` with duplicates, return a new list of unique values while keeping the first occurrence order.
+
+```java
+public List<String> removeDuplicates(List<String> input) {
+    Set<String> seen = new LinkedHashSet<>(input); // keeps order
+    return new ArrayList<>(seen);
+}
+
+// Manual version (shows the logic):
+public List<String> removeDuplicatesManual(List<String> input) {
+    Set<String> seen = new HashSet<>();
+    List<String> result = new ArrayList<>();
+    for (String s : input) {
+        if (seen.add(s)) {          // add() returns false if already present
+            result.add(s);
+        }
+    }
+    return result;
+}
+```
+
+**Explanation:** `LinkedHashSet` is the best of both worlds: HashSet uniqueness + ArrayList order. The manual version shows the underlying mechanism.
+
+| Metric | Value |
+|---|---|
+| Complexity | O(n) time, O(n) memory |
+| Key structures | `LinkedHashSet<T>`, `HashSet<T>` + `ArrayList<T>` |
+
+---
+
+#### 4. Merge Two Sorted Lists
+
+**Task:** Given two sorted `List<Integer>`, return a new sorted list that contains all elements from both.
+
+```java
+public List<Integer> mergeSorted(List<Integer> a, List<Integer> b) {
+    List<Integer> result = new ArrayList<>(a.size() + b.size());
+    int i = 0, j = 0;
+
+    while (i < a.size() && j < b.size()) {
+        result.add(a.get(i) <= b.get(j) ? a.get(i++) : b.get(j++));
+    }
+    while (i < a.size()) result.add(a.get(i++));
+    while (j < b.size()) result.add(b.get(j++));
+
+    return result;
+}
+```
+
+**Explanation:** Two-pointer technique on ArrayLists. Take the smaller element, advance its pointer. When one list is exhausted, append the rest of the other. `get(i)` on ArrayList is O(1).
+
+| Metric | Value |
+|---|---|
+| Complexity | O(a + b) time, O(a + b) memory |
+| Key structures | `ArrayList<Integer>` + two pointers |
+
+---
+
+#### 5. Rotate List — shift an ArrayList by k positions
+
+**Task:** Given an `ArrayList<Integer>` and a number `k`, shift all elements right by `k` positions. The last k elements become the first.
+
+```java
+public void rotate(List<Integer> list, int k) {
+    int n = list.size();
+    if (n == 0) return;
+    k = k % n;             // handle k > size
+    if (k == 0) return;
+
+    Collections.reverse(list);                     // [7,6,5,4,3,2,1] for n=7,k=3
+    Collections.reverse(list.subList(0, k));       // first k
+    Collections.reverse(list.subList(k, n));       // the rest
+    // Result: [5,6,7,1,2,3,4]
+}
+```
+
+**Explanation:** Triple reverse — an elegant trick commonly asked in interviews. Works in O(n) time and in-place. `Collections.reverse()` + `subList()` is a powerful combination.
+
+| Metric | Value |
+|---|---|
+| Complexity | O(n) time, O(1) memory |
+| Key methods | `Collections.reverse()`, `List.subList()` |
+
+---
+
+#### 6. Find Middle — find the middle element
+
+**Task:** Given a `List<Integer>`, return the middle element. For even size, return the left of the two central elements.
+
+```java
+// Simple way (ArrayList only):
+public int findMiddleSimple(List<Integer> list) {
+    return list.get((list.size() - 1) / 2);
+}
+
+// Universal way (two-pointer, works with LinkedList too):
+public int findMiddleTwoPointer(List<Integer> list) {
+    int slow = 0, fast = 0;
+    while (fast < list.size() - 1) {
+        slow++;
+        fast += 2;
+    }
+    return list.get(slow);
+}
+```
+
+**Explanation:** `get(index)` on ArrayList is O(1) — trivial solution. But the two-pointer technique (fast/slow) is essential: it works for singly linked lists where there is no fast index access.
+
+| Metric | Value |
+|---|---|
+| Complexity | O(1) / O(n) time, O(1) memory |
+| Key technique | Two pointers (fast / slow) |
+
+---
+
+#### 7. Intersection of Two Arrays
+
+**Task:** Given two arrays, return their intersection — elements that appear in both, no duplicates.
+
+```java
+public Set<Integer> intersection(int[] a, int[] b) {
+    Set<Integer> setA = new HashSet<>();
+    for (int n : a) setA.add(n);
+
+    Set<Integer> result = new HashSet<>();
+    for (int n : b) {
+        if (setA.contains(n)) {
+            result.add(n);
+        }
+    }
+    return result;
+}
+
+// Compact version using retainAll:
+public Set<Integer> intersectionRetain(int[] a, int[] b) {
+    Set<Integer> setA = Arrays.stream(a).boxed().collect(Collectors.toSet());
+    Set<Integer> setB = Arrays.stream(b).boxed().collect(Collectors.toSet());
+    setA.retainAll(setB);
+    return setA;
+}
+```
+
+**Explanation:** `retainAll()` is the set-specific method for intersection. First collect one array into a HashSet (O(1) lookups), then filter the second.
+
+| Metric | Value |
+|---|---|
+| Complexity | O(a + b) time, O(min(a, b)) memory |
+| Key structure | `HashSet<Integer>` + `retainAll()` |
+
+---
+
+#### 8. Two Sum — find indexes of two numbers that add up to target
+
+**Task:** Given an array `nums` and `target`, return the indexes of the two numbers whose sum is `target`. Exactly one solution exists.
+
+```java
+public int[] twoSum(int[] nums, int target) {
+    Map<Integer, Integer> map = new HashMap<>(); // value -> index
+    for (int i = 0; i < nums.length; i++) {
+        int complement = target - nums[i];
+        if (map.containsKey(complement)) {
+            return new int[]{map.get(complement), i};
+        }
+        map.put(nums[i], i);
+    }
+    return new int[0]; // not found
+}
+```
+
+**Explanation:** The most famous HashMap problem. Walk through the array once. At each step, check if we have already seen the complement. O(1) map lookup makes it linear instead of quadratic brute force.
+
+| Metric | Value |
+|---|---|
+| Complexity | O(n) time, O(n) memory |
+| Key structure | `HashMap<Integer, Integer>` |
+
+---
+
+#### 9. Count Character Frequency
+
+**Task:** Given a string, return a `Map<Character, Integer>` showing how many times each character appears.
+
+```java
+public Map<Character, Integer> charFrequency(String s) {
+    Map<Character, Integer> freq = new HashMap<>();
+    for (char c : s.toCharArray()) {
+        freq.merge(c, 1, Integer::sum);
+    }
+    return freq;
+}
+
+// Clearer version (for beginners):
+public Map<Character, Integer> charFrequencyClassic(String s) {
+    Map<Character, Integer> freq = new HashMap<>();
+    for (char c : s.toCharArray()) {
+        if (freq.containsKey(c)) {
+            freq.put(c, freq.get(c) + 1);
+        } else {
+            freq.put(c, 1);
+        }
+    }
+    return freq;
+}
+```
+
+**Explanation:** `merge(c, 1, Integer::sum)` replaces a whole if-else block. If the key is missing → insert 1. If it exists → add to the current value.
+
+| Metric | Value |
+|---|---|
+| Complexity | O(n) time, O(n) memory |
+| Key structure | `HashMap<Character, Integer>` + `merge()` |
+
+---
+
+#### 10. Most Frequent Element
+
+**Task:** Given an integer array, return the element that appears most often. If there is a tie, return any.
+
+```java
+public int mostFrequent(int[] nums) {
+    Map<Integer, Integer> freq = new HashMap<>();
+    for (int n : nums) {
+        freq.merge(n, 1, Integer::sum);
+    }
+    return Collections.max(freq.entrySet(), Map.Entry.comparingByValue()).getKey();
+}
+```
+
+**Explanation:** Two steps: count with HashMap, find max with `Collections.max()` using a value comparator. For production use PriorityQueue on large data, but this concise version is fine for interviews.
+
+| Metric | Value |
+|---|---|
+| Complexity | O(n) time, O(n) memory |
+| Key structures | `HashMap<Integer, Integer>` + `Collections.max()` |
+
+---
+
+#### 11. Valid Parentheses
+
+**Task:** Given a string of brackets `(){}[]`, determine whether they are correctly opened, closed, and nested.
+
+```java
+public boolean isValid(String s) {
+    Map<Character, Character> pairs = Map.of(')', '(', '}', '{', ']', '[');
+    Deque<Character> stack = new ArrayDeque<>();
+
+    for (char c : s.toCharArray()) {
+        if (pairs.containsValue(c)) {           // opening bracket
+            stack.push(c);
+        } else {                                  // closing bracket
+            if (stack.isEmpty() || stack.pop() != pairs.get(c)) {
+                return false;
+            }
+        }
+    }
+    return stack.isEmpty();
+}
+```
+
+**Explanation:** `Deque` with `ArrayDeque` is the modern replacement for the legacy `Stack` class. Push opening brackets, check the top on closing brackets. Mismatch or empty stack = error.
+
+| Metric | Value |
+|---|---|
+| Complexity | O(n) time, O(n) memory |
+| Key structure | `Deque<Character>` (`ArrayDeque`) |
+
+---
+
+#### 12. Top K Frequent Elements
+
+**Task:** Given an integer array and `k`, return the `k` most frequent elements.
+
+```java
+public List<Integer> topKFrequent(int[] nums, int k) {
+    // 1. Count frequency
+    Map<Integer, Integer> freq = new HashMap<>();
+    for (int n : nums) freq.merge(n, 1, Integer::sum);
+
+    // 2. Sort by frequency descending
+    List<Map.Entry<Integer, Integer>> entries = new ArrayList<>(freq.entrySet());
+    entries.sort((a, b) -> b.getValue() - a.getValue());
+
+    // 3. First k elements
+    List<Integer> result = new ArrayList<>();
+    for (int i = 0; i < k && i < entries.size(); i++) {
+        result.add(entries.get(i).getKey());
+    }
+    return result;
+}
+```
+
+**Explanation:** Combination of all three structures: HashMap for counting, ArrayList for sorting entrySet by value. In production use PriorityQueue (O(n log k) vs O(n log n)), but this version is more readable for interviews.
+
+| Metric | Value |
+|---|---|
+| Complexity | O(n log n) time, O(n) memory |
+| Key structures | `HashMap` → `ArrayList<Entry>` → sort |
+
+---
+
+> [!tip] What to remember for interviews
+> - **HashMap** — for "find it fast" and "count it"
+> - **HashSet** — for uniqueness and intersections
+> - **ArrayList** — default choice, get() is O(1)
+> - **Deque/ArrayDeque** — for stack and queue (parentheses, palindromes)
+> - **Two pointers** — a technique for arrays and lists (reverse, merge, find middle)
+> - **Always state O(...)** after your solution — it shows depth
 
 **8. Why prefer `ArrayList` over `LinkedList` even for inserts?**  
 `LinkedList` has `O(1)` insertion only if you already hold the node. Inserting at an index still costs `O(n)` to walk to it, plus per-node object overhead and poor CPU-cache locality. In practice `ArrayList` usually wins even for middle inserts at realistic sizes.
