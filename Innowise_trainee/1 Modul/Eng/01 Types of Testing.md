@@ -1,3 +1,5 @@
+# 01 Types of Testing
+
 ## Table of Contents
 
 - [[#Main Testing Groups]]

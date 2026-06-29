@@ -1185,6 +1185,30 @@ It extends `Vector` (synchronized and slow) and leaks `List` methods into a stac
 **30. How do you create an immutable collection?**
 Use `List.of(...)`, `Set.of(...)`, or `Map.of(...)` (Java 9+, fully immutable), `Collections.unmodifiableList(list)` (a view of an existing collection), or `List.copyOf(list)` (an immutable snapshot).
 
+**31. Why do we need `equals()` and `hashCode()`?**
+Collections like `HashSet` and `HashMap` use `hashCode()` to quickly find a bucket and `equals()` to check whether the element inside the bucket matches. If you don't override them, two logically equal objects are treated as different.
+
+**32. What is an `Iterator` and why do we need it?**
+An `Iterator` walks through a collection one element at a time and is available on any `Collection`. Its main benefit is safe removal during iteration via `iterator.remove()`.
+
+**33. What is autoboxing and unboxing?**
+Autoboxing is the automatic conversion of a primitive into its wrapper class (`int` → `Integer`). Unboxing is the reverse. Collections only store objects, so when you add a primitive it is automatically boxed: `list.add(5)` turns `5` into `Integer.valueOf(5)`.
+
+**34. How does `TreeMap` differ from `HashMap`?**
+`HashMap` does not guarantee order and works in O(1) average. `TreeMap` stores keys sorted via `Comparable`/`Comparator`, works in O(log n), and does not allow `null` keys.
+
+**35. How do you sort an array and print it?**
+`Arrays.sort(arr)` sorts the array in place. `Arrays.toString(arr)` returns a readable string: `[1, 2, 3]`. For multidimensional arrays use `Arrays.deepToString(arr)`.
+
+**36. What is the difference between `Queue` and `Deque`?**
+`Queue` is a regular queue: add to the end, take from the front (FIFO). `Deque` is double-ended: you can add and remove from both ends. `Deque` can work as both a queue and a stack.
+
+**37. Why do we need generics in collections?**
+Generics (`List<String>`, `Map<Integer, String>`) specify the element type. The compiler checks types at compile time, and you don't need a cast when reading from the collection.
+
+**38. Does `subList()` return a copy or a view?**
+`subList(from, to)` returns a **view** of the original list, not a copy. Changes to the subList (including `clear()`) are reflected in the original list.
+
 ---
 
 ### Intermediate Questions
