@@ -495,17 +495,17 @@ SRS (Specification of Requirements) — документ, описывающий
 Он показывает, что каждому development artifact соответствует тестовая активность, поэтому планирование проверки начинается рано, а не после завершения coding.
 
 **3. Почему в Agile всё равно есть STLC?**
-Agile меняет ритм, но не отменяет тестовые активности. Анализ требований, планирование, дизайн, выполнение, отчётность и closure всё равно происходят, часто внутри каждого sprint.
+Agile меняет ритм, но не отменяет тестовые активности. Анализ требований, планирование, дизайн, выполнение, отчётность и завершение тестирования всё равно происходят, часто внутри каждого sprint.
 
 **4. Почему Test Closure — это процессная активность, а не просто встреча?**
-Она включает проверку exit criteria, summary results, документирование открытых risks, lessons learned и подготовку final reports.
+Она включает проверку exit criteria, сводку результатов, документирование открытых risks, lessons learned и подготовку итоговых отчётов.
 
 ### Вопросы с кодом
 
 **1. Определи phase STLC.**
 
 ```text
-QA reviews user stories, finds missing acceptance criteria, and asks questions before development starts.
+QA проводит review user stories, находит недостающие acceptance criteria и задаёт вопросы до начала разработки.
 ```
 
 Это Requirements Analysis в STLC.
