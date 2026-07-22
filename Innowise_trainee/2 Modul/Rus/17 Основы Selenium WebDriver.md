@@ -7,8 +7,10 @@
 - [[#Selenium API]]
 - [[#Настройка проекта]]
 - [[#Инициализация браузера и навигация]]
+	- [[#Методы WebDriver]]
 - [[#Локаторы элементов]]
 - [[#Работа с элементами]]
+	- [[#Методы WebElement]]
 - [[#Ожидания Waiters]]
 - [[#Типичные ошибки]]
 - [[#Selenium в AQA]]
@@ -48,6 +50,8 @@ WebDriver работает по модели клиент-сервер:
 4. **Браузер** — выполняет действия
 
 Пример: `ChromeDriver` — это драйвер для браузера Chrome.
+
+Удалённый и параллельный запуск браузеров рассматривается в [[25 Selenium Grid]].
 
 ---
 
@@ -102,15 +106,51 @@ public class FirstTest {
 
 ## Инициализация браузера и навигация
 
-| Команда | Описание |
-|---|---|
-| `driver.get(url)` | Открывает страницу |
-| `driver.getTitle()` | Возвращает заголовок страницы |
-| `driver.getCurrentUrl()` | Возвращает текущий URL |
-| `driver.findElement(locator)` | Находит элемент |
-| `driver.findElements(locator)` | Находит несколько элементов |
-| `driver.quit()` | Закрывает браузер и завершает сессию |
-| `driver.close()` | Закрывает текущее окно |
+`WebDriver` управляет сессией браузера, открывает страницы, находит элементы и переключается между контекстами браузера.
+
+### Методы WebDriver
+
+| Метод | Возвращает | Назначение | Пример |
+|---|---|---|---|
+| `get(String url)` | `void` | Открывает URL в текущем окне | `driver.get("https://example.com")` |
+| `getCurrentUrl()` | `String` | Возвращает URL текущей страницы | `driver.getCurrentUrl()` |
+| `getTitle()` | `String` | Возвращает заголовок страницы | `driver.getTitle()` |
+| `getPageSource()` | `String` | Возвращает исходный код текущей страницы | `driver.getPageSource()` |
+| `findElement(By by)` | `WebElement` | Возвращает первый подходящий элемент; бросает `NoSuchElementException`, если элемент не найден | `driver.findElement(By.id("login"))` |
+| `findElements(By by)` | `List<WebElement>` | Возвращает все подходящие элементы; возвращает пустой список, если ничего не найдено | `driver.findElements(By.cssSelector(".item"))` |
+| `getWindowHandle()` | `String` | Возвращает идентификатор текущего окна или вкладки | `driver.getWindowHandle()` |
+| `getWindowHandles()` | `Set<String>` | Возвращает идентификаторы всех открытых окон и вкладок | `driver.getWindowHandles()` |
+| `navigate()` | `WebDriver.Navigation` | Даёт доступ к истории браузера и перезагрузке страницы | `driver.navigate().refresh()` |
+| `switchTo()` | `WebDriver.TargetLocator` | Даёт доступ к фреймам, окнам, `Alert` и активному элементу | `driver.switchTo().frame("payment")` |
+| `manage()` | `WebDriver.Options` | Даёт доступ к файлам cookie, тайм-аутам и настройкам окна | `driver.manage().window().maximize()` |
+| `close()` | `void` | Закрывает только текущее окно или вкладку | `driver.close()` |
+| `quit()` | `void` | Закрывает все окна и завершает WebDriver session | `driver.quit()` |
+
+Основные команды, которые возвращает `navigate()`:
+
+| Метод | Назначение | Пример |
+|---|---|---|
+| `to(String url)` | Открывает URL через `Navigation API` | `driver.navigate().to("https://example.com/login")` |
+| `back()` | Возвращает на предыдущую страницу | `driver.navigate().back()` |
+| `forward()` | Переходит на следующую страницу в истории браузера | `driver.navigate().forward()` |
+| `refresh()` | Перезагружает текущую страницу | `driver.navigate().refresh()` |
+
+Пример:
+
+```java
+WebDriver driver = new ChromeDriver();
+
+try {
+    driver.get("https://example.com");
+    System.out.println(driver.getTitle());
+    System.out.println(driver.getCurrentUrl());
+} finally {
+    driver.quit();
+}
+```
+
+> [!warning] Всегда закрывай WebDriver
+> Если тест открывает браузер, но не вызывает `quit()`, процессы браузера могут продолжить работу и занимать ресурсы.
 
 ---
 
@@ -140,17 +180,54 @@ element.click();
 
 ## Работа с элементами
 
-Основные действия с элементами:
+Selenium представляет элемент страницы через интерфейс `WebElement`.
+
+### Методы WebElement
+
+| Метод | Возвращает | Назначение | Пример |
+|---|---|---|---|
+| `click()` | `void` | Нажимает на элемент | `button.click()` |
+| `submit()` | `void` | Отправляет форму, в которой находится элемент | `form.submit()` |
+| `sendKeys(CharSequence... keys)` | `void` | Вводит текст или клавиши в элемент | `input.sendKeys("admin")` |
+| `clear()` | `void` | Очищает редактируемое поле | `input.clear()` |
+| `getText()` | `String` | Возвращает видимый текст элемента | `message.getText()` |
+| `getTagName()` | `String` | Возвращает имя HTML-тега | `element.getTagName()` |
+| `getAttribute(String name)` | `String` или `null` | Возвращает значение HTML-атрибута или DOM-свойства по правилам Selenium | `input.getAttribute("value")` |
+| `getDomAttribute(String name)` | `String` или `null` | Возвращает значение HTML-атрибута | `input.getDomAttribute("required")` |
+| `getDomProperty(String name)` | `String` или `null` | Возвращает текущее значение DOM-свойства | `input.getDomProperty("value")` |
+| `getCssValue(String name)` | `String` | Возвращает вычисленное значение CSS-свойства | `button.getCssValue("color")` |
+| `isDisplayed()` | `boolean` | Проверяет, виден ли элемент | `message.isDisplayed()` |
+| `isEnabled()` | `boolean` | Проверяет, доступен ли элемент | `button.isEnabled()` |
+| `isSelected()` | `boolean` | Проверяет, выбран ли checkbox, radio button или option | `checkbox.isSelected()` |
+| `getLocation()` | `Point` | Возвращает координаты левого верхнего угла элемента | `element.getLocation()` |
+| `getSize()` | `Dimension` | Возвращает ширину и высоту элемента | `element.getSize()` |
+| `getRect()` | `Rectangle` | Возвращает координаты и размер элемента вместе | `element.getRect()` |
+| `findElement(By by)` | `WebElement` | Находит первый подходящий дочерний элемент внутри текущего элемента | `form.findElement(By.name("email"))` |
+| `findElements(By by)` | `List<WebElement>` | Находит все подходящие дочерние элементы внутри текущего элемента | `menu.findElements(By.tagName("a"))` |
+| `getShadowRoot()` | `SearchContext` | Возвращает открытый корень Shadow DOM элемента | `host.getShadowRoot()` |
+| `getAccessibleName()` | `String` | Возвращает вычисленное доступное имя элемента | `button.getAccessibleName()` |
+| `getAriaRole()` | `String` | Возвращает вычисленную ARIA role | `button.getAriaRole()` |
+| `getScreenshotAs(OutputType<X> target)` | `X` | Создаёт снимок экрана только этого элемента | `element.getScreenshotAs(OutputType.FILE)` |
+
+> [!info] HTML-атрибут и DOM-свойство
+> HTML-атрибут записан в разметке, а DOM-свойство показывает текущее состояние в JavaScript. Используй `getDomAttribute()` или `getDomProperty()`, когда нужен точный результат. `getAttribute()` — удобный метод, который может проверять оба варианта.
+
+Пример:
 
 ```java
-WebElement button = driver.findElement(By.id("submit"));
-button.click(); // клик
-
 WebElement input = driver.findElement(By.name("username"));
-input.sendKeys("testuser"); // ввод текста
+input.clear();
+input.sendKeys("testuser");
 
-String text = element.getText(); // получение текста
-boolean displayed = element.isDisplayed(); // проверка видимости
+WebElement checkbox = driver.findElement(By.id("remember"));
+if (!checkbox.isSelected()) {
+    checkbox.click();
+}
+
+WebElement button = driver.findElement(By.id("submit"));
+if (button.isDisplayed() && button.isEnabled()) {
+    button.click();
+}
 ```
 
 ---

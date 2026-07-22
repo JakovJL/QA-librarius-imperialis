@@ -4,13 +4,33 @@
 
 - [[#Why Selenium Matters]]
 - [[#What WebDriver Is]]
+	- [[#Common Browser Drivers]]
 - [[#Selenium API Overview]]
 - [[#Browser Initialization and Navigation]]
+	- [[#WebDriver Methods]]
 - [[#Locators]]
+	- [[#Common Locator Types]]
+	- [[#`findElement()` vs `findElements()`]]
+	- [[#Locator Priority]]
 - [[#Working with Web Elements]]
+	- [[#WebElement Methods]]
+	- [[#Dropdown Basics]]
 - [[#Advanced Interactions]]
+	- [[#Actions (Mouse and Keyboard)]]
+	- [[#Alerts (JavaScript Popups)]]
+	- [[#Frames and Iframes]]
+	- [[#Windows and Tabs]]
+	- [[#Screenshots]]
 - [[#Waiters and Synchronization]]
+	- [[#Implicit Wait]]
+	- [[#Explicit Wait Idea]]
+	- [[#Common Expected Conditions]]
 - [[#Common Selenium Errors]]
+	- [[#`NoSuchElementException`]]
+	- [[#`TimeoutException`]]
+	- [[#`StaleElementReferenceException`]]
+	- [[#`ElementClickInterceptedException`]]
+	- [[#`NoSuchSessionException`]]
 - [[#Page Object Model]]
 - [[#Selenium Basics in AQA]]
 - [[#Interview Questions]]
@@ -47,6 +67,8 @@ It is one of the core tools in UI automation with Java.
 **WebDriver** is an API for controlling a browser programmatically.
 
 In simple words, it acts like a remote control for Chrome, Firefox, Edge, and other browsers.
+
+For remote and parallel browser execution, see [[25 Selenium Grid]].
 
 ### Main Idea
 
@@ -99,40 +121,47 @@ The most important parts are:
 
 ## Browser Initialization and Navigation
 
-### Open Browser
+`WebDriver` manages the browser session, opens pages, finds elements, and switches between browser contexts.
+
+### WebDriver Methods
+
+| Method | Returns | Purpose | Example |
+|---|---|---|---|
+| `get(String url)` | `void` | Opens a URL in the current window | `driver.get("https://example.com")` |
+| `getCurrentUrl()` | `String` | Returns the current page URL | `driver.getCurrentUrl()` |
+| `getTitle()` | `String` | Returns the page title | `driver.getTitle()` |
+| `getPageSource()` | `String` | Returns the current page source | `driver.getPageSource()` |
+| `findElement(By by)` | `WebElement` | Returns the first matching element; throws `NoSuchElementException` if none is found | `driver.findElement(By.id("login"))` |
+| `findElements(By by)` | `List<WebElement>` | Returns all matching elements; returns an empty list if none are found | `driver.findElements(By.cssSelector(".item"))` |
+| `getWindowHandle()` | `String` | Returns the handle of the current window or tab | `driver.getWindowHandle()` |
+| `getWindowHandles()` | `Set<String>` | Returns handles of all open windows and tabs | `driver.getWindowHandles()` |
+| `navigate()` | `WebDriver.Navigation` | Gives access to browser history and page reload methods | `driver.navigate().refresh()` |
+| `switchTo()` | `WebDriver.TargetLocator` | Gives access to frames, windows, alerts, and the active element | `driver.switchTo().frame("payment")` |
+| `manage()` | `WebDriver.Options` | Gives access to cookies, timeouts, and window settings | `driver.manage().window().maximize()` |
+| `close()` | `void` | Closes only the current window or tab | `driver.close()` |
+| `quit()` | `void` | Closes all windows and ends the WebDriver session | `driver.quit()` |
+
+Common commands returned by `navigate()`:
+
+| Method | Purpose | Example |
+|---|---|---|
+| `to(String url)` | Opens a URL through the navigation API | `driver.navigate().to("https://example.com/login")` |
+| `back()` | Goes to the previous page | `driver.navigate().back()` |
+| `forward()` | Goes to the next page in browser history | `driver.navigate().forward()` |
+| `refresh()` | Reloads the current page | `driver.navigate().refresh()` |
+
+Example:
 
 ```java
 WebDriver driver = new ChromeDriver();
-```
 
-### Open URL
-
-```java
-driver.get("https://example.com");
-```
-
-### Get Page Information
-
-```java
-System.out.println(driver.getTitle());
-System.out.println(driver.getCurrentUrl());
-```
-
-### Close Browser
-
-```java
-driver.quit();
-```
-
-`quit()` closes the whole browser session and is usually the correct choice in tests.
-
-### Basic Navigation
-
-```java
-driver.navigate().to("https://example.com/login");
-driver.navigate().back();
-driver.navigate().forward();
-driver.navigate().refresh();
+try {
+    driver.get("https://example.com");
+    System.out.println(driver.getTitle());
+    System.out.println(driver.getCurrentUrl());
+} finally {
+    driver.quit();
+}
 ```
 
 > [!warning] Always Close Driver
@@ -190,40 +219,51 @@ Usually a practical order is:
 
 Selenium represents page elements with the `WebElement` interface.
 
-### Common Operations
+### WebElement Methods
+
+| Method | Returns | Purpose | Example |
+|---|---|---|---|
+| `click()` | `void` | Clicks the element | `button.click()` |
+| `submit()` | `void` | Submits the form that contains the element | `form.submit()` |
+| `sendKeys(CharSequence... keys)` | `void` | Types text or keyboard keys into the element | `input.sendKeys("admin")` |
+| `clear()` | `void` | Clears an editable field | `input.clear()` |
+| `getText()` | `String` | Returns the visible text of the element | `message.getText()` |
+| `getTagName()` | `String` | Returns the HTML tag name | `element.getTagName()` |
+| `getAttribute(String name)` | `String` or `null` | Returns an attribute or property value using Selenium's convenience logic | `input.getAttribute("value")` |
+| `getDomAttribute(String name)` | `String` or `null` | Returns the value of the HTML attribute | `input.getDomAttribute("required")` |
+| `getDomProperty(String name)` | `String` or `null` | Returns the current DOM property value | `input.getDomProperty("value")` |
+| `getCssValue(String name)` | `String` | Returns the computed CSS property value | `button.getCssValue("color")` |
+| `isDisplayed()` | `boolean` | Checks whether the element is visible | `message.isDisplayed()` |
+| `isEnabled()` | `boolean` | Checks whether the element is enabled | `button.isEnabled()` |
+| `isSelected()` | `boolean` | Checks whether a checkbox, radio button, or option is selected | `checkbox.isSelected()` |
+| `getLocation()` | `Point` | Returns the element's top-left position | `element.getLocation()` |
+| `getSize()` | `Dimension` | Returns the element's width and height | `element.getSize()` |
+| `getRect()` | `Rectangle` | Returns the element's position and size together | `element.getRect()` |
+| `findElement(By by)` | `WebElement` | Finds the first matching descendant inside the element | `form.findElement(By.name("email"))` |
+| `findElements(By by)` | `List<WebElement>` | Finds all matching descendants inside the element | `menu.findElements(By.tagName("a"))` |
+| `getShadowRoot()` | `SearchContext` | Returns the element's open Shadow DOM root | `host.getShadowRoot()` |
+| `getAccessibleName()` | `String` | Returns the computed accessible name | `button.getAccessibleName()` |
+| `getAriaRole()` | `String` | Returns the computed ARIA role | `button.getAriaRole()` |
+| `getScreenshotAs(OutputType<X> target)` | `X` | Takes a screenshot of only this element | `element.getScreenshotAs(OutputType.FILE)` |
+
+> [!info] Attribute vs Property
+> An HTML attribute is written in the markup, while a DOM property is the current JavaScript state. Use `getDomAttribute()` or `getDomProperty()` when you need an exact result. `getAttribute()` is a convenient method that may check both.
+
+Example:
 
 ```java
 WebElement input = driver.findElement(By.id("username"));
+input.clear();
 input.sendKeys("admin");
 
-WebElement button = driver.findElement(By.id("loginBtn"));
-button.click();
-```
-
-### Read Information
-
-```java
-WebElement message = driver.findElement(By.id("message"));
-
-System.out.println(message.getText());
-System.out.println(message.isDisplayed());
-System.out.println(message.isEnabled());
-System.out.println(message.getAttribute("class"));
-```
-
-### Clear Input
-
-```java
-input.clear();
-input.sendKeys("new value");
-```
-
-### Checkboxes and Radio Buttons
-
-```java
 WebElement checkbox = driver.findElement(By.id("remember"));
 if (!checkbox.isSelected()) {
     checkbox.click();
+}
+
+WebElement button = driver.findElement(By.id("loginBtn"));
+if (button.isDisplayed() && button.isEnabled()) {
+    button.click();
 }
 ```
 

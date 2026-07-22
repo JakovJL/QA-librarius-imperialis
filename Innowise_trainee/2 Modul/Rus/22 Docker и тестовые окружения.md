@@ -47,7 +47,7 @@
 | Size | больше | меньше |
 | Isolation | сильнее | хорошая, но легче |
 | Common tool | VMware, VirtualBox | Docker |
-
+ц
 ### Snapshot VM
 
 **Snapshot** — это сохранённое состояние virtual machine в конкретный момент времени.
@@ -96,7 +96,7 @@ AQA-инженеры используют Docker, чтобы:
 
 - запускать databases для tests
 - поднимать mock services
-- запускать Selenium Grid
+- запускать Selenium Grid → см. [[25 Selenium Grid]]
 - создавать стабильные CI environments
 - воспроизводить bugs локально
 

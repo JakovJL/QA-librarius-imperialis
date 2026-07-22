@@ -96,7 +96,7 @@ AQA engineers use Docker to:
 
 - run databases for tests
 - start mock services
-- run Selenium Grid
+- run Selenium Grid → see [[25 Selenium Grid]]
 - create stable CI environments
 - reproduce bugs locally
 
